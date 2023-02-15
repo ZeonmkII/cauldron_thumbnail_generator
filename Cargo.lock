@@ -68,7 +68,9 @@ name = "cauldron_library"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "futures",
  "neo4rs",
+ "tokio",
  "walkdir",
 ]
 
