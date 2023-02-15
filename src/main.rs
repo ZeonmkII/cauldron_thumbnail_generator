@@ -19,11 +19,11 @@ fn is_not_hidden(entry: &DirEntry) -> bool {
 }
 
 /*
-    How to use:
-                Name      = x.path().file_name().unwrap().to_str().unwrap()
-                Parent    = x.path().parent().unwrap().to_str().unwrap()
-                Full-Path = x.path().display().to_string()
-                TODO ...just the path without drive letter ? (for thumbnail)
+    Path:
+            Name      = x.path().file_name().unwrap().to_str().unwrap()
+            Parent    = x.path().parent().unwrap().to_str().unwrap()
+            Full-Path = x.path().display().to_string()
+            TODO ...just the path without drive letter ? (for thumbnail)
 */
 
 // [Neo4J] Save Directory name into Database
@@ -99,7 +99,7 @@ fn main() {
         }
     };
 
-    // TODO receive thumbnail path input from user?
+    // TODO! receive thumbnail path input from user?
     let thumb_dir = std::path::Path::new("D:\\Pictures\\tn");
     println!(
         "Saving thumbnails into '{}'...",
