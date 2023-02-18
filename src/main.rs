@@ -1,15 +1,15 @@
 use colored::*;
 // use neo4rs::*;
-use image::imageops::FilterType;
-use image::ImageError;
-use rayon::prelude::*;
-use std::fs::{create_dir_all, metadata};
+// use image::imageops::FilterType;
+// use image::ImageError;
+use pathdiff::diff_paths;
+// use rayon::prelude::*;
+use std::fs::create_dir_all;
 use std::io;
 use std::path::Path;
 use walkdir::{DirEntry, WalkDir};
 
-// [WalkDir]
-// Helper function to detect if the file/folder supposed to be hidden
+// [WalkDir] We'll skip the file if it is supposed to be hidden
 fn is_not_hidden(entry: &DirEntry) -> bool {
     entry
         .file_name()
@@ -20,59 +20,59 @@ fn is_not_hidden(entry: &DirEntry) -> bool {
 
 /*
     Path:
-            Name      = x.path().file_name().unwrap().to_str().unwrap()
-            Parent    = x.path().parent().unwrap().to_str().unwrap()
-            Full-Path = x.path().display().to_string()
-            TODO ...just the path without drive letter ? (for thumbnail)
+        Name      = x.path().file_name().unwrap().to_str().unwrap()
+        Parent    = x.path().parent().unwrap().to_str().unwrap()
+        Full-Path = x.path().display().to_string()
 */
 
-// [Neo4J] Save Directory name into Database
+// [Neo4J] Save Directory into Database
 fn add_directory_node(path: &Path) {
     let _name: &str = path.file_name().unwrap().to_str().unwrap();
     let _parent: &str = path.parent().unwrap().to_str().unwrap();
     let full_path: String = path.display().to_string();
 
     println!("DIR : {}", full_path.blue());
-
-    // TODO! Insert into Database
-    /*
-    [Neo4j] Connection
-    let url = "127.0.0.1:7687";
-    let user = "neo4j";
-    let pass = "realplayer";
-    let graph = Graph::new(url, user, pass).await.unwrap();
-
-    graph
-        .run(
-            query("CREATE (f:Folder { name: $name, path: $path })")
-                .param("name", dir_name)
-                .param("path", full_path),
-        )
-        .await
-        .unwrap();
-    */
+    // TODO! Insert folder into Database
 }
 
-// [Neo4J] Save filename into Database
+// [Neo4J] Save Filename into Database
 fn add_file_node(path: &Path) {
-    let _name: &str = path.file_name().unwrap().to_str().unwrap();
+    let name: &str = path.file_name().unwrap().to_str().unwrap();
     let _parent: &str = path.parent().unwrap().to_str().unwrap();
-    let full_path: String = path.display().to_string();
+    let _full_path: String = path.display().to_string();
 
-    println!("File: {}", full_path);
-    // TODO! Insert into Database
+    println!("File: {}", name);
+    // TODO! Insert file into Database
+}
+
+// Create Folder for the thumbnails
+fn create_folder(path: &Path, root: &str, dest: &Path) -> std::io::Result<()> {
+    let relative_path = diff_paths(path, &root);
+    create_dir_all(dest.join(relative_path.unwrap()))?;
+    Ok(())
+}
+
+// Generate thumbnail for the image file
+fn create_thumbnail(path: &Path, root: &str, dest: &Path) -> std::io::Result<()> {
+    // TODO! Implement thumbnail generator function
+    // 1. check if file is image type
+    // 2. generate thumbnail according to size_input
+    Ok(())
 }
 
 fn main() {
-    // The divider line, for readability
+    // Divider line, for readability
     let divider: &str = "================================================";
 
     // Loop to get 'proper' directory input from user
     let lib_dir: String = loop {
-        println!("{}", divider.white().bold());
-        println!("Please input the {}: ", "Root Directory".purple().bold());
+        println!("{}", divider.purple().bold());
+        println!(
+            "Please input the {}: ",
+            "Image Library Directory".purple().bold()
+        );
         println!("(example: {} )", "D:\\path\\to\\folder".italic());
-        println!("{}", divider.white().bold());
+        println!("{}", divider.purple().bold());
 
         // Receive the input
         let mut user_input = String::new();
@@ -99,33 +99,42 @@ fn main() {
         }
     };
 
-    // TODO! receive thumbnail path input from user?
-    let thumb_dir = std::path::Path::new("D:\\Pictures\\tn");
-    println!(
-        "Saving thumbnails into '{}'...",
-        thumb_dir.display().to_string().red()
-    );
-
     // RunTime Logger
     use std::time::Instant;
     let now = Instant::now();
 
-    // Traverse the directory, save structure to Database, and generate the thumbnails
+    // Library are original files, Destination is for the thumbnails
+    let lib_root = lib_dir.clone();
+    // TODO! receive thumbnail path input from user?
+    let dest_root = Path::new("D:\\Pictures\\thumbnail");
+
+    // Traverse the Library directory, save structure to Database, and generate the thumbnails
     WalkDir::new(lib_dir)
         .into_iter()
         .filter_entry(|e| is_not_hidden(e))
         .filter_map(|v| v.ok())
         .for_each(|x| {
-            // Check if it's a File or Folder
-            let current = metadata(x.path()).unwrap();
-            if current.is_dir() {
-                // Directory:
-                add_directory_node(x.path());
+            // Is it a File or Folder?
+            if x.path().is_dir() {
+                // Folder: create empty folder, keeping the same directory structure
+                match create_folder(x.path(), &lib_root, dest_root) {
+                    Ok(_value) => {
+                        add_directory_node(x.path()); // add to Database
+                    }
+                    Err(error) => {
+                        println!("Error: {}", error.to_string());
+                    }
+                }
             } else {
-                // File:
-                add_file_node(x.path());
-                // TODO! Generate thumbnails function
-                // generate_thumbnail();
+                // File: generate thumbnail for image file, into the prepared folder
+                match create_thumbnail(x.path(), &lib_root, dest_root) {
+                    Ok(_value) => {
+                        add_file_node(x.path()); // add to Database
+                    }
+                    Err(error) => {
+                        println!("Error: {}", error.to_string());
+                    }
+                }
             }
         });
 
