@@ -7,7 +7,6 @@ use std::io;
 use std::path::Path;
 use std::{error::Error, fs::create_dir_all};
 use walkdir::WalkDir;
-// use neo4rs::*;
 
 /*
     Path:
@@ -18,8 +17,8 @@ use walkdir::WalkDir;
 
 // [Neo4J] Save Directory into Database
 fn add_directory_node(_path: &Path) {
-    // let _name: &str = path.file_name().unwrap().to_str().unwrap();
-    // let _parent: &str = path.parent().unwrap().to_str().unwrap();
+    // let name: &str = path.file_name().unwrap().to_str().unwrap();
+    // let parent: &str = path.parent().unwrap().to_str().unwrap();
     // let full_path: String = path.display().to_string();
 
     // println!("DIR : {}", full_path.blue());
@@ -53,8 +52,7 @@ fn create_thumbnail(path: &Path, root: &str, dest: &Path) -> Result<(), Box<dyn 
         .save(dest.join(relative_path.unwrap()))?)
 }
 
-// Check extension of a file
-// (code from StackOverflow)
+// Check extension of a file (code from StackOverflow)
 pub trait FileExtension {
     fn has_extension<S: AsRef<str>>(&self, extensions: &[S]) -> bool;
 }
@@ -88,7 +86,6 @@ fn main() {
             .read_line(&mut user_input)
             .expect("Failed to read input");
 
-        // Clean up input, then store into a new String variable
         let user_input: String = user_input.trim().to_string();
 
         // Check if the input directory exist.
@@ -120,7 +117,6 @@ fn main() {
         .into_iter()
         .filter_map(|v| v.ok())
         .for_each(|x| {
-            // Ugly but works...
             if x.path()
                 .has_extension(&["png", "jpg", "jpeg", "gif", "bmp"])
             {
@@ -142,14 +138,11 @@ fn main() {
         .par_bridge()
         .filter_map(|v| v.ok())
         .for_each(|x| {
-            // let mut err_stack = vec![];
-            // let mut err_msg = String::new();
             if x.path().is_dir() {
                 // Folder:
                 match create_folder(x.path(), &lib_root, dest_root) {
                     Ok(_value) => {
                         add_directory_node(x.path()); // to Database
-                                                      // pb.inc(1);
                     }
                     Err(error) => {
                         println!("ERROR: {}", error.to_string());
@@ -161,20 +154,14 @@ fn main() {
                 match create_thumbnail(x.path(), &lib_root, dest_root) {
                     Ok(_value) => {
                         add_file_node(x.path()); // to Database
-                        pb.inc(1);
+                        pb.inc(1); // Progress Bar
                     }
                     Err(_error) => {
-                        // let mut err_msg = String::new();
                         // println!(
                         //     "ERROR:{} : {}",
                         //     x.path().file_name().unwrap().to_str().unwrap().red(),
                         //     error.to_string()
                         // );
-                        // err_msg = "ERROR: ".to_string()
-                        //     + x.path().file_name().unwrap().to_str().unwrap()
-                        //     + ": "
-                        //     + &error.to_string();
-                        // err_stack.push(err_msg);
                         // TODO #{6} Handle Errors properly
                     }
                 }
@@ -182,9 +169,6 @@ fn main() {
         });
 
     pb.finish_with_message("Done.");
-    // while let Some(item) = err_stack.pop() {
-    //     println!("{}", item);
-    // }
 
     // RunTime Logger
     let elapsed = now.elapsed();
