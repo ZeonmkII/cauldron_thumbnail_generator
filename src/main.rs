@@ -15,8 +15,8 @@ use walkdir::WalkDir;
         Full-Path = x.path().display().to_string()
 */
 
-// [Neo4J] Save Directory into Database
-fn add_directory_node(_path: &Path) {
+// Save Directory Structure into Database
+fn store_dir(_path: &Path) {
     // let name: &str = path.file_name().unwrap().to_str().unwrap();
     // let parent: &str = path.parent().unwrap().to_str().unwrap();
     // let full_path: String = path.display().to_string();
@@ -25,8 +25,8 @@ fn add_directory_node(_path: &Path) {
     // TODO! #{1} Insert folder into Database
 }
 
-// [Neo4J] Save Filename into Database
-fn add_file_node(_path: &Path) {
+// Save File Path into Database
+fn store_file(_path: &Path) {
     // let name: &str = path.file_name().unwrap().to_str().unwrap();
     // let _parent: &str = path.parent().unwrap().to_str().unwrap();
     // let _full_path: String = path.display().to_string();
@@ -42,7 +42,7 @@ fn create_folder(path: &Path, root: &str, dest: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-// Generate thumbnail for the image file
+// Generate thumbnail from the image file
 fn create_thumbnail(path: &Path, root: &str, dest: &Path) -> Result<(), Box<dyn Error>> {
     let relative_path = diff_paths(path, &root);
     let img = image::open(path)?;
@@ -142,7 +142,7 @@ fn main() {
                 // Folder:
                 match create_folder(x.path(), &lib_root, dest_root) {
                     Ok(_value) => {
-                        add_directory_node(x.path()); // to Database
+                        store_dir(x.path());
                     }
                     Err(error) => {
                         println!("ERROR: {}", error.to_string());
@@ -153,7 +153,7 @@ fn main() {
                 // File:
                 match create_thumbnail(x.path(), &lib_root, dest_root) {
                     Ok(_value) => {
-                        add_file_node(x.path()); // to Database
+                        store_file(x.path());
                         pb.inc(1); // Progress Bar
                     }
                     Err(_error) => {
