@@ -8,6 +8,8 @@ use std::path::Path;
 use std::{error::Error, fs::create_dir_all};
 use walkdir::WalkDir;
 
+extern crate dont_disappear;
+
 /*
     Path:
         Name      = x.path().file_name().unwrap().to_str().unwrap()
@@ -177,8 +179,8 @@ fn main() {
                     Ok(_value) => {
                         store_dir(x.path());
                     }
-                    Err(error) => {
-                        println!("ERROR: {}", error.to_string());
+                    Err(_error) => {
+                        // println!("ERROR: {}", error.to_string());
                         // TODO #{6} Handle Errors properly
                     }
                 }
@@ -189,8 +191,8 @@ fn main() {
                         store_file(x.path());
                         pb.inc(1); // Progress Bar
                     }
-                    Err(error) => {
-                        println!("ERROR: {}", error.to_string());
+                    Err(_error) => {
+                        // println!("ERROR: {}", error.to_string());
                         // TODO #{6} Handle Errors properly
                     }
                 }
@@ -208,6 +210,8 @@ fn main() {
         elapsed.as_secs().to_string().green()
     );
     println!("{}", divider.bold());
+
+    dont_disappear::any_key_to_continue::default();
 }
 
 // TODO! List
