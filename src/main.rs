@@ -52,6 +52,65 @@ fn create_thumbnail(path: &Path, root: &str, dest: &Path) -> Result<(), Box<dyn 
         .save(dest.join(relative_path.unwrap()))?)
 }
 
+// Loop to get 'proper' directory input from user
+fn get_directory(dir_type: &str) -> String {
+    let divider: &str = "================================================";
+    let lib_name;
+    match dir_type {
+        "src" => lib_name = "Image Library",
+        "des" => lib_name = "Thumbnails",
+        _ => lib_name = "ERROR!",
+    }
+    let lib_dir: String = loop {
+        println!("{}", divider.blue().bold());
+        println!("Please enter {} path: ", lib_name.bright_purple());
+        println!("(example: {} )", "D:\\path\\to\\folder".italic());
+        println!("{}", divider.blue().bold());
+
+        // Receive the input
+        let mut user_input = String::new();
+        io::stdin()
+            .read_line(&mut user_input)
+            .expect("Failed to read input");
+
+        let user_input: String = user_input.trim().to_string();
+
+        // Check if the input directory exist.
+        if Path::new(&user_input).exists() {
+            println!("{}", divider);
+            println!(
+                "{} folder {}! Continue...",
+                lib_name.green(),
+                "exist".green()
+            );
+            println!("{}", divider);
+            break user_input;
+        } else {
+            // for 'Image Library', make sure the directory does exist.
+            if dir_type == "src" {
+                println!("{}", divider);
+                println!(
+                    "{} folder {}! Please re-check.",
+                    lib_name.red(),
+                    "doesn't exist".red()
+                );
+                println!("{}", divider);
+            } else {
+                // but for 'Thumbnails', doesn't matter, it will be created anyway.
+                println!("{}", divider);
+                println!(
+                    "{} folder will be create at: {}",
+                    lib_name.green(),
+                    user_input.clone().as_str().green()
+                );
+                println!("{}", divider);
+                break user_input;
+            }
+        }
+    };
+    return lib_dir;
+}
+
 // Check extension of a file (code from StackOverflow)
 pub trait FileExtension {
     fn has_extension<S: AsRef<str>>(&self, extensions: &[S]) -> bool;
@@ -73,42 +132,16 @@ fn main() {
     // Divider line, for readability
     let divider: &str = "================================================";
 
-    // Loop to get 'proper' directory input from user
-    let lib_dir: String = loop {
-        println!("{}", divider.blue().bold());
-        println!("Please enter {} path: ", "Image Library".bright_blue());
-        println!("(example: {} )", "D:\\path\\to\\folder".italic());
-        println!("{}", divider.blue().bold());
-
-        // Receive the input
-        let mut user_input = String::new();
-        io::stdin()
-            .read_line(&mut user_input)
-            .expect("Failed to read input");
-
-        let user_input: String = user_input.trim().to_string();
-
-        // Check if the input directory exist.
-        if Path::new(&user_input).exists() {
-            println!("{}", divider);
-            println!("Image Library {}! Continue...", "exist".green());
-            println!("{}", divider);
-            break user_input;
-        } else {
-            println!("{}", divider);
-            println!("Image Library {}! Please re-check.", "doesn't exist".red());
-            println!("{}", divider);
-        }
-    };
+    // Get path for original image files
+    let lib_dir = get_directory("src");
+    let lib_root = lib_dir.clone();
+    // Get path for the thumbnail files
+    let dest_srt = get_directory("des");
+    let dest_root = Path::new(&dest_srt);
 
     // RunTime Logger
     use std::time::Instant;
     let now = Instant::now();
-
-    // Library are original files, Destination is for the thumbnails
-    let lib_root = lib_dir.clone();
-    // TODO! #{3} receive thumbnail path input from user?
-    let dest_root = Path::new("D:\\Pictures\\thumbnail");
 
     // Progress Bar
     let mut num_files = 0;
@@ -156,12 +189,8 @@ fn main() {
                         store_file(x.path());
                         pb.inc(1); // Progress Bar
                     }
-                    Err(_error) => {
-                        // println!(
-                        //     "ERROR:{} : {}",
-                        //     x.path().file_name().unwrap().to_str().unwrap().red(),
-                        //     error.to_string()
-                        // );
+                    Err(error) => {
+                        println!("ERROR: {}", error.to_string());
                         // TODO #{6} Handle Errors properly
                     }
                 }
@@ -184,7 +213,5 @@ fn main() {
 // TODO! List
 // TODO! #{1} save folder structure into Database
 // TODO! #{2} save (only image) file into Database
-// TODO! #{3} receive user input for Thumbnail directory
 // TODO  #{4} let user specify thumbnail sizes (as options; s:150px, m:200px, l:250px, etc.)
-// TODO  #{5} refactor user input parts (both Library and Thumbnail) into its own function
 // TODO  #{6} Handle Errors properly (collect all, then print afterward)
