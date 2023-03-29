@@ -8,8 +8,6 @@ use std::path::Path;
 use std::{error::Error, fs::create_dir_all};
 use walkdir::WalkDir;
 
-extern crate dont_disappear;
-
 /*
     Path:
         Name      = x.path().file_name().unwrap().to_str().unwrap()
