@@ -2,37 +2,70 @@ use colored::*;
 use indicatif::{ProgressBar, ProgressStyle};
 use pathdiff::diff_paths;
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
 use std::io;
 use std::path::Path;
 use std::{error::Error, fs::create_dir_all};
+use surrealdb::engine::remote::ws::{Client, Ws};
+use surrealdb::opt::auth::Root;
+use surrealdb::sql::Thing;
+use surrealdb::Result as db_Result;
+use surrealdb::Surreal;
+use tokio::runtime::Runtime;
 use walkdir::WalkDir;
 
-/*
-    Path:
-        Name      = x.path().file_name().unwrap().to_str().unwrap()
-        Parent    = x.path().parent().unwrap().to_str().unwrap()
-        Full-Path = x.path().display().to_string()
-*/
+static DB: Surreal<Client> = Surreal::init();
 
+#[derive(Serialize, Deserialize)]
+struct Record {
+    #[allow(dead_code)]
+    id: Thing,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Image {
+    name: String,
+    path: String,
+    deleted: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Folder {
+    name: String,
+    path: String,
+    deleted: bool,
+}
 // Save Directory Structure into Database
-fn store_dir(_path: &Path) {
-    // let name: &str = path.file_name().unwrap().to_str().unwrap();
-    // let parent: &str = path.parent().unwrap().to_str().unwrap();
-    // let full_path: String = path.display().to_string();
+async fn store_dir(path: &Path) -> db_Result<()> {
+    let name: String = path.file_name().unwrap().to_string_lossy().to_string();
+    let full_path: String = path.display().to_string();
 
-    // println!("DIR : {}", full_path.blue());
-    // TODO! #{1} Insert folder into Database
+    let _created: Folder = DB
+        .create("folder")
+        .content(Folder {
+            name: name,
+            path: full_path,
+            deleted: false,
+        })
+        .await?;
+    Ok(())
 }
 
 // Save File Path into Database
-fn store_file(_path: &Path) {
-    // let name: &str = path.file_name().unwrap().to_str().unwrap();
-    // let _parent: &str = path.parent().unwrap().to_str().unwrap();
-    // let _full_path: String = path.display().to_string();
+async fn store_file(path: &Path) -> db_Result<()> {
+    let name: String = path.file_name().unwrap().to_string_lossy().to_string();
+    let full_path: String = path.display().to_string();
 
-    // println!("File: {}", name);
-    // TODO! #{2} Insert file into Database
+    let _created: Image = DB
+        .create("image")
+        .content(Image {
+            name: name,
+            path: full_path,
+            deleted: false,
+        })
+        .await?;
+    Ok(())
 }
 
 // Create Folder for the thumbnails
@@ -128,7 +161,8 @@ impl<P: AsRef<Path>> FileExtension for P {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() -> db_Result<()> {
     // Divider line, for readability
     let divider: &str = "================================================";
 
@@ -165,6 +199,21 @@ fn main() {
         .unwrap(),
     );
 
+    // Connect to the database
+    DB.connect::<Ws>("localhost:8000").await?;
+
+    // Sign-in
+    DB.signin(Root {
+        username: "root",
+        password: "root",
+    })
+    .await?;
+
+    // Select a namespace / database
+    DB.use_ns("cauldron_thumbnail")
+        .use_db("cauldron_thumbnail")
+        .await?;
+
     // Traverse the Library directory, save structure to Database, and generate the thumbnails
     WalkDir::new(lib_dir)
         .into_iter()
@@ -175,7 +224,9 @@ fn main() {
                 // Folder:
                 match create_folder(x.path(), &lib_root, dest_root) {
                     Ok(_value) => {
-                        store_dir(x.path());
+                        let rt = Runtime::new().unwrap();
+                        let future = store_dir(x.path());
+                        let _r = rt.block_on(future);
                     }
                     Err(_error) => {
                         // println!("ERROR: {}", error.to_string());
@@ -186,7 +237,9 @@ fn main() {
                 // File:
                 match create_thumbnail(x.path(), &lib_root, dest_root) {
                     Ok(_value) => {
-                        store_file(x.path());
+                        let rt = Runtime::new().unwrap();
+                        let future = store_file(x.path());
+                        let _r = rt.block_on(future);
                         pb.inc(1); // Progress Bar
                     }
                     Err(_error) => {
@@ -210,10 +263,9 @@ fn main() {
     println!("{}", divider.bold());
 
     dont_disappear::any_key_to_continue::default();
+
+    Ok(())
 }
 
-// TODO! List
-// TODO! #{1} save folder structure into Database
-// TODO! #{2} save (only image) file into Database
 // TODO  #{4} let user specify thumbnail sizes (as options; s:150px, m:200px, l:250px, etc.)
 // TODO  #{6} Handle Errors properly (collect all, then print afterward)
