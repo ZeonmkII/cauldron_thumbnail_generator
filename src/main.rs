@@ -68,7 +68,7 @@ async fn store_file(path: &Path) -> db_Result<()> {
     Ok(())
 }
 
-// Create Folder for the thumbnails
+// (Re)Create Folder Structure for the thumbnails
 fn create_folder(path: &Path, root: &str, dest: &Path) -> std::io::Result<()> {
     let relative_path = diff_paths(path, &root);
     create_dir_all(dest.join(relative_path.unwrap()))?;
@@ -108,7 +108,7 @@ fn get_directory(dir_type: &str) -> String {
 
         let user_input: String = user_input.trim().to_string();
 
-        // Check if the input directory exist.
+        // Check if the input directory exist. If not, re-enter.
         if Path::new(&user_input).exists() {
             println!("{}", divider);
             println!(
@@ -199,10 +199,10 @@ async fn main() -> db_Result<()> {
         .unwrap(),
     );
 
-    // Connect to the database
-    DB.connect::<Ws>("localhost:8000").await?;
+    // Connect to SurrealDB
+    DB.connect::<Ws>("127.0.0.1:8000").await?;
 
-    // Sign-in
+    // Sign-in to SurrealDB
     DB.signin(Root {
         username: "root",
         password: "root",
@@ -214,7 +214,7 @@ async fn main() -> db_Result<()> {
         .use_db("cauldron_thumbnail")
         .await?;
 
-    // Traverse the Library directory, save structure to Database, and generate the thumbnails
+    // Traverse the Library directory, save structure to SurrealDB, and generate the thumbnails
     WalkDir::new(lib_dir)
         .into_iter()
         .par_bridge()
