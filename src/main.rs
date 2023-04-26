@@ -27,6 +27,13 @@ struct Record {
 struct Image {
     name: String,
     path: String,
+    // parent: String,
+    size: u64,
+    // width: u32,
+    // height: u32,
+    tags: String,
+    stars: i8,
+    favorites: bool,
     deleted: bool,
 }
 
@@ -34,6 +41,8 @@ struct Image {
 struct Folder {
     name: String,
     path: String,
+    // parent: String,
+    favorites: bool,
     deleted: bool,
 }
 // Save Directory Structure into Database
@@ -46,9 +55,14 @@ async fn store_dir(path: &Path) -> db_Result<()> {
         .content(Folder {
             name: name,
             path: full_path,
+            // parent: path.parent().unwrap().to_string_lossy().to_string(),
+            favorites: false,
             deleted: false,
         })
         .await?;
+
+    // TODO! #{7} create (graph) relationship with parent folder ...maybe: (file)->[IN_FOLDER]->(parent_folder)
+
     Ok(())
 }
 
@@ -56,15 +70,27 @@ async fn store_dir(path: &Path) -> db_Result<()> {
 async fn store_file(path: &Path) -> db_Result<()> {
     let name: String = path.file_name().unwrap().to_string_lossy().to_string();
     let full_path: String = path.display().to_string();
+    // Doing this is VERY slow, do we really need this?
+    // let img = image::open(path).unwrap();
 
     let _created: Image = DB
         .create("image")
         .content(Image {
             name: name,
             path: full_path,
+            // parent: path.parent().unwrap().to_string_lossy().to_string(),
+            size: path.metadata().unwrap().len(),
+            // width: img.width(),
+            // height: img.height(),
+            tags: "".to_string(),
+            stars: 0,
+            favorites: false,
             deleted: false,
         })
         .await?;
+
+    // TODO! #{7} create (graph) relationship with parent folder ...maybe: (file)->[IN_FOLDER]->(parent_folder)
+
     Ok(())
 }
 
@@ -269,3 +295,4 @@ async fn main() -> db_Result<()> {
 
 // TODO  #{4} let user specify thumbnail sizes (as options; s:150px, m:200px, l:250px, etc.)
 // TODO  #{6} Handle Errors properly (collect all, then print afterward)
+// TODO! #{7} create (graph) relationship with parent folder ...maybe: (file)->[IN_FOLDER]->(parent_folder)
