@@ -23,11 +23,11 @@ struct Record {
     id: Thing,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Image {
     name: String,
     path: String,
-    // parent: String,
+    parent: String,
     size: u64,
     // width: u32,
     // height: u32,
@@ -37,11 +37,11 @@ struct Image {
     deleted: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Folder {
     name: String,
     path: String,
-    // parent: String,
+    parent: String,
     favorites: bool,
     deleted: bool,
 }
@@ -50,12 +50,21 @@ async fn store_dir(path: &Path) -> db_Result<()> {
     let name: String = path.file_name().unwrap().to_string_lossy().to_string();
     let full_path: String = path.display().to_string();
 
+    // DEBUG
+    let mut response = DB
+        .query("SELECT * FROM folder WHERE path = 'D:\\pictures\\_for model';")
+        // .bind(("parent", "d:/pictures/_for model"))
+        .await?;
+    println!("response = {:#?}", response);
+    let result: Option<Folder> = response.take(0)?;
+    println!("result = {:#?}", result);
+
     let _created: Folder = DB
         .create("folder")
         .content(Folder {
             name: name,
             path: full_path,
-            // parent: path.parent().unwrap().to_string_lossy().to_string(),
+            parent: path.parent().unwrap().to_string_lossy().to_string(),
             favorites: false,
             deleted: false,
         })
@@ -70,15 +79,25 @@ async fn store_dir(path: &Path) -> db_Result<()> {
 async fn store_file(path: &Path) -> db_Result<()> {
     let name: String = path.file_name().unwrap().to_string_lossy().to_string();
     let full_path: String = path.display().to_string();
-    // Doing this is VERY slow, do we really need this?
+    // Doing this is VERY slow
     // let img = image::open(path).unwrap();
+
+    // let mut response = DB
+    //     .query("SELECT * FROM folder WHERE path = $parent;")
+    //     .bind((
+    //         "parent",
+    //         path.parent().unwrap().to_string_lossy().to_string(),
+    //     ))
+    //     .await?;
+
+    // let parent_id: Option<String> = response.take((0, "id"))?;
 
     let _created: Image = DB
         .create("image")
         .content(Image {
             name: name,
             path: full_path,
-            // parent: path.parent().unwrap().to_string_lossy().to_string(),
+            parent: path.parent().unwrap().to_string_lossy().to_string(),
             size: path.metadata().unwrap().len(),
             // width: img.width(),
             // height: img.height(),
@@ -277,6 +296,16 @@ async fn main() -> db_Result<()> {
         });
 
     pb.finish_with_message("Done.");
+
+    // DEBUG
+    // let mut response = DB
+    //     .query("SELECT * FROM folder WHERE name = 'costume';")
+    //     .await?;
+    // println!("response = {:#?}", response);
+    // let results: Vec<Folder> = response.take(0)?;
+    // results
+    //     .into_iter()
+    //     .for_each(|x| println!("result = {:#?}", x));
 
     // RunTime Logger
     let elapsed = now.elapsed();
